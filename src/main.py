@@ -23,6 +23,8 @@ users_dict = users
 verben = pd.read_csv(file, usecols=["verben"]).values.flatten().tolist()
 preps = pd.read_csv(file, usecols=["präpositionen"]).values.flatten().tolist()
 
+chat_id = 0
+
 def get_random():
     idx = randint(0, len(verben)-1)
     return [idx, verben[idx], preps[idx]]
@@ -37,7 +39,7 @@ def send_welcome(message):
     user_id = str(message.from_user.id)
 
     bot.send_message(message.chat.id, f"Herzlich wilkommen @{username}! Bist du bereit, Verben mit den richtigen Präpositionen zu verbinden?", parse_mode="Markdown")
-    bot.send_message(message.chat.id, "Schreib /s um zu spielen", parse_mode="Markdown")
+    bot.send_message(message.chat.id, "Schreib /s um zu spielen oder /h um um Hilfe zu bitten", parse_mode="Markdown")
 
     d = str(datetime.now())
     with open("../users.txt", "a") as f:
@@ -47,14 +49,24 @@ def send_welcome(message):
         print(f"{username} has connected - {d}")
         f.write(username + ": " + d + "\n")
 
-chat_id = 0
-score = 0
+@bot.message_handler(commands=["h"])
+def help(message):
+    bot.reply_to(message, "Moglichkeiten: \n/s - spielen \n/p - Punktzahl zeigen \n/r - Punktzahl resetten \n/h - Hilfe")
 
 @bot.message_handler(commands=["resetten", "r"])
 def reset(message):
-    global score
-    score = 0
-    bot.reply_to(message, f"Deine Punktzahl ist jetzt {score}")
+    username = str(message.from_user.username)
+    user_id = str(message.from_user.id)
+
+    if len(username) == 0:
+        username = user_id
+
+    users_dict[username] = 0
+    bot.reply_to(message, f"Deine Punktzahl ist jetzt {users_dict[username]}")
+
+@bot.message_handler(commands=["p"])
+def show_score(message):
+    bot.reply_to(message, f"{users_dict}")
 
 @bot.message_handler(commands=["s"])
 def play(message):
@@ -101,8 +113,6 @@ def play(message):
 
     @bot.message_handler(func=lambda message: True)
     def verify(message):
-        global score
-
         markup = types.ReplyKeyboardRemove(selective=False)
 
         user_answer = transform(message.text[1:])
