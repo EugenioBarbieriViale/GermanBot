@@ -58,7 +58,7 @@ def reset(message):
 
 @bot.message_handler(commands=["s"])
 def play(message):
-    global chat_id
+    global chat_id, verben, preps
     
     username = str(message.from_user.username)
     user_id = str(message.from_user.id)
@@ -82,8 +82,13 @@ def play(message):
         prepositions = [correct[2], s1[2], s2[2]]
 
     user_state.append(correct[2])
+
     verben.pop(correct[0])
     preps.pop(correct[0])
+
+    if len(verben) <= 3:
+        verben = pd.read_csv(file, usecols=["verben"]).values.flatten().tolist()
+        preps = pd.read_csv(file, usecols=["präpositionen"]).values.flatten().tolist()
 
     shuffle(prepositions)
 

@@ -1,1 +1,1 @@
-users = {'seiunbarabba': 6}
+users = {'seiunbarabba': 0}
