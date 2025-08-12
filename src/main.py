@@ -7,6 +7,7 @@ import numpy as np
 import telebot
 from telebot import types
 
+from webscrape import translate
 from users import users
 
 file = "../data/verben.csv"
@@ -18,6 +19,7 @@ token = token.replace("\n", "")
 bot = telebot.TeleBot(token, parse_mode=None)
 
 user_state = []
+verb_state = []
 users_dict = users
 
 verben = pd.read_csv(file, usecols=["verben"]).values.flatten().tolist()
@@ -78,7 +80,8 @@ def play(message):
     if len(username) == 0:
         username = user_id
 
-    users_dict.setdefault(username, 0)
+    if username not in users_dict:
+        users_dict[username] = 0
 
     markup = types.ReplyKeyboardMarkup(row_width=3)
     bot.send_message(message.chat.id, f"{chat_id} - Mit welcher Präposition kann dieses Verb verbunden werden?")
@@ -94,6 +97,7 @@ def play(message):
         prepositions = [correct[2], s1[2], s2[2]]
 
     user_state.append(correct[2])
+    verb_state.append(correct[1])
 
     verben.pop(correct[0])
     preps.pop(correct[0])
@@ -126,7 +130,7 @@ def play(message):
             if users_dict[username] != 0:
                 users_dict[username] -= 1
 
-        bot.send_message(message.chat.id, f"Die Punktzahl von @{username} ist: {users_dict[username]}")
+        bot.send_message(message.chat.id, f"Die Ubersetzung ist:\n{translate(verb_state[chat_id-1])} \n\nDie Punktzahl von @{username} ist: {users_dict[username]}")
 
         with open("users.py", "w") as f:
             f.write("users = " + str(users_dict) + "\n")
