@@ -1,9 +1,13 @@
 from datetime import datetime
-import pandas as pd
 from random import randint, shuffle
+
+import pandas as pd
+import numpy as np
 
 import telebot
 from telebot import types
+
+from users import users
 
 file = "../data/verben.csv"
 
@@ -14,9 +18,10 @@ token = token.replace("\n", "")
 bot = telebot.TeleBot(token, parse_mode=None)
 
 user_state = []
+users_dict = users
 
-verben = pd.read_csv(file, usecols=["verben"]).values.flatten()
-preps = pd.read_csv(file, usecols=["präpositionen"]).values.flatten()
+verben = pd.read_csv(file, usecols=["verben"]).values.flatten().tolist()
+preps = pd.read_csv(file, usecols=["präpositionen"]).values.flatten().tolist()
 
 def get_random():
     idx = randint(0, len(verben)-1)
@@ -29,12 +34,16 @@ def transform(s):
 @bot.message_handler(commands=["start"])
 def send_welcome(message):
     username = str(message.from_user.username)
+    user_id = str(message.from_user.id)
 
     bot.send_message(message.chat.id, f"Herzlich wilkommen @{username}! Bist du bereit, Verben mit den richtigen Präpositionen zu verbinden?", parse_mode="Markdown")
     bot.send_message(message.chat.id, "Schreib /s um zu spielen", parse_mode="Markdown")
 
     d = str(datetime.now())
     with open("../users.txt", "a") as f:
+        if len(username) == 0:
+            username = user_id
+
         print(f"{username} has connected - {d}")
         f.write(username + ": " + d + "\n")
 
@@ -50,6 +59,14 @@ def reset(message):
 @bot.message_handler(commands=["s"])
 def play(message):
     global chat_id
+    
+    username = str(message.from_user.username)
+    user_id = str(message.from_user.id)
+
+    if len(username) == 0:
+        username = user_id
+
+    users_dict.setdefault(username, 0)
 
     markup = types.ReplyKeyboardMarkup(row_width=3)
     bot.send_message(message.chat.id, f"{chat_id} - Mit welcher Präposition kann dieses Verb verbunden werden?")
@@ -59,12 +76,14 @@ def play(message):
     s2 = get_random()
 
     prepositions = [correct[2], s1[2], s2[2]]
-    while len(prepositions) < 3:
+    while prepositions[0] == prepositions[1] or prepositions[0] == prepositions[2] or prepositions[1] == prepositions[2]:
         s1 = get_random()
         s2 = get_random()
         prepositions = [correct[2], s1[2], s2[2]]
 
     user_state.append(correct[2])
+    verben.pop(correct[0])
+    preps.pop(correct[0])
 
     shuffle(prepositions)
 
@@ -86,13 +105,16 @@ def play(message):
 
         if user_answer == transform(correct_answer):
             bot.reply_to(message, f"Richtig! Die Antwort ist '{correct_answer}'", reply_markup=markup)
-            score += 1
+            users_dict[username] += 1
         else:
             bot.reply_to(message, f"Falsch! Die Antwort war '{correct_answer}'", reply_markup=markup)
-            if score != 0:
-                score -= 1
+            if users_dict[username] != 0:
+                users_dict[username] -= 1
 
-        bot.send_message(message.chat.id, f"Deine Punktzahl ist: {score}")
+        bot.send_message(message.chat.id, f"Die Punktzahl von @{username} ist: {users_dict[username]}")
+
+        with open("users.py", "w") as f:
+            f.write("users = " + str(users_dict) + "\n")
 
     chat_id += 1
 
