@@ -16,7 +16,12 @@ def translate(verb):
 
     soup = BeautifulSoup(r.content, "html.parser")
 
-    translation = soup.find("span", lang="en").text
+    tr = soup.find("span", lang="en")
+
+    if tr == None:
+        return "Ubersetzung nicht verfugbar"
+
+    translation = tr.text
 
     v = 0
     for i in range(len(translation)):

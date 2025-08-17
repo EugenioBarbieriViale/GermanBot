@@ -20,6 +20,7 @@ bot = telebot.TeleBot(token, parse_mode=None)
 
 user_state = []
 verb_state = []
+user_list = []
 users_dict = users
 
 verben = pd.read_csv(file, usecols=["verben"]).values.flatten().tolist()
@@ -45,7 +46,7 @@ def send_welcome(message):
 
     d = str(datetime.now())
     with open("../users.txt", "a") as f:
-        if len(username) == 0:
+        if username == None:
             username = user_id
 
         print(f"{username} has connected - {d}")
@@ -60,11 +61,11 @@ def reset(message):
     username = str(message.from_user.username)
     user_id = str(message.from_user.id)
 
-    if len(username) == 0:
+    if username == None:
         username = user_id
 
-    users_dict[username] = 0
-    bot.reply_to(message, f"Deine Punktzahl ist jetzt {users_dict[username]}")
+    users_dict[user_list[-1]] = 0
+    bot.reply_to(message, f"Deine Punktzahl ist jetzt {users_dict[user_list[-1]]}")
 
 @bot.message_handler(commands=["p"])
 def show_score(message):
@@ -77,11 +78,13 @@ def play(message):
     username = str(message.from_user.username)
     user_id = str(message.from_user.id)
 
-    if len(username) == 0:
+    if username == None:
         username = user_id
 
     if username not in users_dict:
         users_dict[username] = 0
+
+    user_list.append(username)
 
     markup = types.ReplyKeyboardMarkup(row_width=3)
     bot.send_message(message.chat.id, f"{chat_id} - Mit welcher Präposition kann dieses Verb verbunden werden?")
@@ -117,6 +120,7 @@ def play(message):
 
     @bot.message_handler(func=lambda message: True)
     def verify(message):
+        print(users_dict)
         markup = types.ReplyKeyboardRemove(selective=False)
 
         user_answer = transform(message.text[1:])
@@ -124,13 +128,13 @@ def play(message):
 
         if user_answer == transform(correct_answer):
             bot.reply_to(message, f"Richtig! Die Antwort ist '{correct_answer}'", reply_markup=markup)
-            users_dict[username] += 1
+            users_dict[user_list[-1]] += 1
         else:
             bot.reply_to(message, f"Falsch! Die Antwort war '{correct_answer}'", reply_markup=markup)
-            if users_dict[username] != 0:
-                users_dict[username] -= 1
+            if users_dict[user_list[-1]] != 0:
+                users_dict[user_list[-1]] -= 1
 
-        bot.send_message(message.chat.id, f"Die Ubersetzung ist:\n{translate(verb_state[chat_id-1])} \n\nDie Punktzahl von @{username} ist: {users_dict[username]}")
+        bot.send_message(message.chat.id, f"Die Ubersetzung ist:\n{translate(verb_state[chat_id-1])} \n\nDie Punktzahl von @{user_list[-1]} ist: {users_dict[user_list[-1]]}")
 
         with open("users.py", "w") as f:
             f.write("users = " + str(users_dict) + "\n")
